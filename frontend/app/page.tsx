@@ -1,0 +1,14 @@
+import Login from "./_components/login";
+
+export default function Home() {
+  return (
+    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black p-8">
+      <main className="flex flex-col items-center gap-8 w-full max-w-3xl">
+        <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
+          no-trust-cms
+        </h1>
+        <Login />
+      </main>
+    </div>
+  );
+}
