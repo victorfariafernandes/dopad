@@ -18,6 +18,48 @@ This file is maintained by AI agents. Every time an agent makes any change to th
 
 ---
 
+## 2026-05-08 — Move NonceStore interface to adapters/store
+
+**Agent:** Claude Sonnet 4.6
+**Files changed:**
+- `backend/services/auth/ports.go` (deleted)
+- `backend/adapters/store/nonce.go` (modified)
+- `backend/services/auth/service.go` (modified)
+
+**What changed:**
+- Deleted `ports.go` — interface no longer lives in the service layer
+- Added `NonceStore` interface to `adapters/store/nonce.go`, co-located with its implementation
+- Updated `service.go` to import `adapters/store` and reference `store.NonceStore`
+
+**Why:** User preference — the interface should be close to the adapter that implements it, not in the service package.
+
+---
+
+## 2026-05-08 — Refactor Go backend into services / adapters / middlewares
+
+**Agent:** Claude Sonnet 4.6
+**Files changed:**
+- `backend/main.go` (rewritten)
+- `backend/services/auth/ports.go` (added)
+- `backend/services/auth/service.go` (added)
+- `backend/adapters/store/nonce.go` (added)
+- `backend/adapters/http/auth.go` (added)
+- `backend/middlewares/cors.go` (added)
+- `docs/architecture.md` (updated backend section)
+
+**What changed:**
+- Split single `main.go` into a layered architecture: services, adapters (inward HTTP + outward store), and middlewares
+- `services/auth` holds all business logic (nonce generation, SIWE verification, JWT issuance/validation) behind a `NonceStore` interface
+- `adapters/store` provides `MemoryNonceStore` implementing that interface; `GetAndDelete` is atomic to prevent nonce replay
+- `adapters/http` provides thin HTTP handlers that decode requests, call the service, and encode responses; uses sentinel errors (`ErrInvalidSIWEMessage`, `ErrSignatureInvalid`, `ErrNonceExpired`) for precise status codes
+- `middlewares/cors` is now a standard `func(HandlerFunc) HandlerFunc` wrapper instead of a boolean helper
+- `main.go` is now a pure wiring file: instantiate store → inject into service → register handlers with middleware
+- Updated `docs/architecture.md` to document the new directory structure and layer responsibilities
+
+**Why:** User requested an architectural refactor separating the codebase into services (business logic), adapters (inward HTTP + outward store), and pluggable middlewares.
+
+---
+
 ## 2026-05-08 — Fix code style violations found by /review-docs
 
 **Agent:** Claude Sonnet 4.6

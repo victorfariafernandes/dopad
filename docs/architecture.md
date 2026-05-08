@@ -48,10 +48,32 @@ app/
 | Language | Go 1.21 |
 | HTTP | `net/http` stdlib |
 | Auth | SIWE (`spruceid/siwe-go`) + JWT (`golang-jwt/jwt/v5`) |
-| Nonce store | In-memory `map[string]nonceEntry` guarded by `sync.Mutex`, swept every minute |
 | Nonce TTL | 5 minutes |
 | JWT TTL | 24 hours |
 | CORS | Hardcoded to `http://localhost:3000` |
+
+Directory structure (layered architecture):
+```
+backend/
+├── main.go                     # Wires layers: adapters → service → HTTP router
+├── services/
+│   └── auth/
+│       ├── service.go          # Business logic: nonce gen, SIWE verify, JWT issue/validate
+│       └── ports.go            # NonceStore interface
+├── adapters/
+│   ├── http/
+│   │   └── auth.go             # Inward adapter: HTTP handlers, delegates to service
+│   └── store/
+│       └── nonce.go            # Outward adapter: in-memory NonceStore + sweep goroutine
+└── middlewares/
+    └── cors.go                 # CORS middleware wrapper (plugged via Register)
+```
+
+Layer responsibilities:
+- **Services** — pure business logic, no HTTP or storage details; depends only on interfaces (`NonceStore`)
+- **Adapters (inward)** — HTTP handlers; decode requests, call service, encode responses
+- **Adapters (outward)** — implement service interfaces; currently in-memory, swappable for Redis/DB
+- **Middlewares** — reusable `func(http.HandlerFunc) http.HandlerFunc` wrappers plugged at registration
 
 ---
 
