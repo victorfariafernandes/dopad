@@ -18,6 +18,25 @@ This file is maintained by AI agents. Every time an agent makes any change to th
 
 ---
 
+## 2026-05-08 — Add home page slug input and pad edit page
+
+**Agent:** Claude Sonnet 4.6
+**Files changed:**
+- `frontend/app/page.tsx` (rewritten)
+- `frontend/app/[slug]/page.tsx` (added)
+- `frontend/app/[slug]/PadEditor.tsx` (added)
+- `frontend/app/_lib/pads.ts` (added)
+
+**What changed:**
+- Replaced home page (SIWE login) with a slug input form — user types a pad name and is redirected to `/{slug}`
+- Added dynamic route `app/[slug]/page.tsx` — server component shell that awaits `params` and renders the editor
+- Added `PadEditor.tsx` — full-height textarea with 800ms debounce auto-save and save status indicator in header
+- Added `_lib/pads.ts` — mocked pad store using `localStorage`; async signatures so API call sites won't need to change when the real backend is wired in
+
+**Why:** User requested the two core product pages: home (navigate to a pad) and edit (read/write pad content), with all backend calls mocked.
+
+---
+
 ## 2026-05-08 — Move NonceStore interface to adapters/store
 
 **Agent:** Claude Sonnet 4.6
