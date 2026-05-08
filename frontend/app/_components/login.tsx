@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import { SiweMessage } from "siwe";
-import { apiFetch } from "../_lib/api";
+import { apiFetch, SESSION_KEY } from "../_lib/api";
 
 declare global {
   interface Window {
@@ -11,10 +11,18 @@ declare global {
   }
 }
 
-export default function Login() {
+export function Login() {
   const [address, setAddress] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!sessionStorage.getItem(SESSION_KEY)) return;
+    apiFetch("/auth/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (data?.address) setAddress(data.address); })
+      .catch(() => {});
+  }, []);
 
   async function handleLogin() {
     setError("");
@@ -34,7 +42,7 @@ export default function Login() {
       const message = new SiweMessage({
         domain: window.location.host,
         address: addr,
-        statement: "Sign in to no-trust-cms",
+        statement: "Sign in to dopad",
         uri: window.location.origin,
         version: "1",
         chainId: Number(network.chainId),
@@ -56,7 +64,8 @@ export default function Login() {
         throw new Error(data.error ?? "Verification failed");
       }
 
-      const { address: verified } = await verifyRes.json();
+      const { address: verified, token } = await verifyRes.json();
+      sessionStorage.setItem(SESSION_KEY, token);
       setAddress(verified);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -67,6 +76,7 @@ export default function Login() {
 
   async function handleLogout() {
     await apiFetch("/auth/logout", { method: "POST" });
+    sessionStorage.removeItem(SESSION_KEY);
     setAddress(null);
   }
 

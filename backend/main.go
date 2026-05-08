@@ -55,7 +55,7 @@ func generateNonce() (string, error) {
 func cors(w http.ResponseWriter, r *http.Request) bool {
 	w.Header().Set("Access-Control-Allow-Origin", corsOrigin)
 	w.Header().Set("Access-Control-Allow-Credentials", "true")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
 	if r.Method == http.MethodOptions {
 		w.WriteHeader(http.StatusNoContent)
@@ -145,15 +145,7 @@ func handleVerify(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session",
-		Value:    signed,
-		Path:     "/",
-		MaxAge:   int(jwtTTL.Seconds()),
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-	})
-	writeJSON(w, http.StatusOK, map[string]string{"address": addr})
+	writeJSON(w, http.StatusOK, map[string]string{"address": addr, "token": signed})
 }
 
 // GET /auth/me
@@ -161,12 +153,13 @@ func handleMe(w http.ResponseWriter, r *http.Request) {
 	if cors(w, r) {
 		return
 	}
-	cookie, err := r.Cookie("session")
-	if err != nil {
+	authHeader := r.Header.Get("Authorization")
+	if !strings.HasPrefix(authHeader, "Bearer ") {
 		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "not authenticated"})
 		return
 	}
-	token, err := jwt.Parse(cookie.Value, func(t *jwt.Token) (any, error) {
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
+	token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (any, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method")
 		}
@@ -185,14 +178,6 @@ func handleLogout(w http.ResponseWriter, r *http.Request) {
 	if cors(w, r) {
 		return
 	}
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session",
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-	})
 	writeJSON(w, http.StatusOK, map[string]string{"ok": "logged out"})
 }
 
