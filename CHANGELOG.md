@@ -18,6 +18,82 @@ This file is maintained by AI agents. Every time an agent makes any change to th
 
 ---
 
+## 2026-05-14 — Store deriver_id on pads; auto-select unlock method on locked pad screen
+
+**Agent:** claude-sonnet-4-6
+**Files changed:**
+- `backend/encryption/deriver.go` — new file; `Deriver` string type with `DeriverPassword = "password"` and `DeriverSIWE = "siwe"` constants
+- `backend/adapters/store/pad.go` — added `DeriverId encryption.Deriver` field to `Pad` struct
+- `backend/adapters/http/pad.go` — added `deriver_id` to PUT request body and to `padResponse` (returned by both GET and PUT)
+- `frontend/app/_lib/crypto.ts` — exported `DERIVER_PASSWORD`, `DERIVER_SIWE` constants and `DeriverId` type; updated registry and class to use them
+- `frontend/app/_lib/pads.ts` — added `deriverId: DeriverId | ""` to `PadData`; maps `deriver_id` ↔ `deriverId` in GET/PUT
+- `frontend/app/[slug]/PadEditor.tsx` — added `deriverId` state; `useEffect` reads `pad.deriverId` and auto-sets `selectedMethod` on locked pads; all `setPad` calls include `deriverId`
+
+**Why:** When a user returned to a pad they encrypted with a wallet (SIWE), the lock screen defaulted to the Password tab, forcing a manual tab switch. Persisting `deriver_id` and using it to initialize `selectedMethod` fixes the UX.
+
+---
+
+## 2026-05-14 — Remove SIWE auth + add extensible KeyDeriver abstraction for pad encryption
+
+**Agent:** claude-sonnet-4-6
+**Files changed:**
+- `backend/adapters/store/nonce.go` — deleted
+- `backend/services/auth/service.go` — deleted (entire `services/auth/` directory removed)
+- `backend/adapters/http/auth.go` — deleted
+- `backend/adapters/http/pad.go` — moved `writeJSON` helper here (was in auth.go)
+- `backend/main.go` — removed auth wiring, nonce store, JWT secret, sweep goroutine
+- `backend/middlewares/cors.go` — removed `Authorization` from allowed headers; removed `POST` from allowed methods
+- `backend/go.mod` / `backend/go.sum` — removed `golang-jwt/jwt`, `spruceid/siwe-go`, and all transitive deps
+- `frontend/app/_components/login.tsx` — deleted
+- `frontend/app/_lib/api.ts` — removed `SESSION_KEY` export and Bearer token injection
+- `frontend/app/_lib/crypto.ts` — appended `KeyDeriver` interface, `getPasswordDeriver` factory, `SIWEKeyDeriver` class, `keyDerivers` registry, `getDeriver`
+- `frontend/app/[slug]/PadEditor.tsx` — added method picker tabs (Password / Wallet SIWE) on lock screen and encrypt form; `handleSIWEUnlock`, `handleSIWEFormEncrypt`
+- `frontend/package.json` / `frontend/pnpm-lock.yaml` — removed `siwe` npm package
+- `docs/architecture.md` — removed Auth Flow section; updated component tables; added Key Derivation section
+- `docs/api-spec.md` — removed all `/auth/*` endpoints; updated CORS conventions
+- `docs/features.md` — replaced Authentication section with Encryption section listing both derivers
+
+**Why:** The SIWE authentication flow (wallet login → JWT) is no longer needed. The nonce store, which backed that flow, was dead code. SIWE wallet signing is repurposed as a client-side encryption key derivation method alongside password-based derivation. A `KeyDeriver` interface and registry make it straightforward to add more methods (Google Auth, Microsoft Auth, etc.) in the future.
+
+---
+
+## 2026-05-14 — Fix: encrypted pad shows ciphertext on reload instead of password prompt
+
+**Agent:** Claude Sonnet 4.6
+**Files changed:**
+- `frontend/app/[slug]/PadEditor.tsx` (modified)
+
+**What changed:**
+- Added `clearTimeout(timerRef.current)` at the top of `handlePasswordFormSubmit` to cancel any pending auto-save debounce timer before the encryption save begins
+
+**Why:** Race condition — a debounce timer set while the user was typing could fire while the encryption `setPad` call was in-flight. If that auto-save network request resolved after the encryption save, it would overwrite the backend with `{encrypted: false}`, causing the ciphertext to be shown in the textarea on the next reload instead of the password-unlock overlay.
+
+---
+
+## 2026-05-14 — Add password-based pad encryption (AES-GCM-256 + SHA3-256)
+
+**Agent:** Claude Sonnet 4.6
+**Files changed:**
+- `backend/adapters/store/pad.go` (modified)
+- `backend/services/pad/service.go` (modified)
+- `backend/adapters/http/pad.go` (modified)
+- `frontend/app/_lib/crypto.ts` (added)
+- `frontend/app/_lib/pads.ts` (modified)
+- `frontend/app/[slug]/PadEditor.tsx` (modified)
+- `frontend/package.json` (modified — added `@noble/hashes`)
+
+**What changed:**
+- Backend `Pad` struct extended with `Encrypted bool` and `VerifyBlob string`; `PadStore` interface and `MemoryPadStore` updated accordingly
+- `pad.Service.Get/Set` now operate on `store.Pad` instead of plain strings
+- HTTP `GET /pads/{slug}` response now includes `encrypted` and `verify_blob` fields; `PUT` body accepts the same
+- New `frontend/app/_lib/crypto.ts`: `deriveKey` (SHA3-256 password → AES-GCM-256 key), `encryptText`/`decryptText` (AES-GCM, base64 IV+ciphertext), `makeVerifyBlob`/`checkVerifyBlob` (sentinel + salt approach for cheap wrong-key detection)
+- `pads.ts` updated: new `PadData` type, `getPad` returns `PadData | null`, `setPad` accepts `PadData` with encryption fields
+- `PadEditor.tsx` rewritten with `loading → locked → unlocked` state machine: password overlay for locked pads, "Encrypt" button for unencrypted pads, "Change password" button for already-encrypted pads; auto-save re-encrypts with the session key held in memory
+
+**Why:** Implement client-side end-to-end encryption so the server never sees plaintext pad content.
+
+---
+
 ## 2026-05-08 — Fix review-docs errors and warnings
 
 **Agent:** Claude Sonnet 4.6

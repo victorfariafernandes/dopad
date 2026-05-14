@@ -2,28 +2,28 @@
 
 ## Core Concept
 
-dopad is an online instant file sharer. Any URL path is a "pad" — visit `dopad.io/anything` to read or write content. No login required for basic use. Inspired by dontpad.com.
+dopad is an online instant file sharer. Any URL path is a "pad" — visit `dopad.io/anything` to read or write content. No login required. Inspired by dontpad.com.
 
 ---
 
 ## Implemented Features
 
-### Authentication
-- **SIWE (Sign-In with Ethereum)** — wallet-based login via MetaMask or any EIP-1193 provider
-  - Nonce-based challenge/response flow (5-minute nonce TTL)
-  - JWT session token (24-hour TTL) stored in `sessionStorage`
-  - Logout clears session on client; server is stateless
+### End-to-End Encryption
+- **AES-GCM-256** — content encrypted in browser before upload; server stores ciphertext only
+- **Password-based key** — SHA3-256(password) → AES key; password never sent to server
+- **Wallet-based key (SIWE)** — `personal_sign` of deterministic per-pad message → SHA3-256(signature) → AES key; re-derivable with the same wallet anytime
+- **Verify blob** — encrypted sentinel stored alongside ciphertext; used to validate the key without server-side plaintext
+- **Extensible `KeyDeriver` interface** — new methods (Google Auth, Microsoft, etc.) added by implementing the interface and registering in `keyDerivers`
 
-### Frontend
-- Wallet connection via `ethers.js` v6
-- SIWE message construction and signing via `siwe` v3
-- Connected address display
-- Bearer token injection on all API calls via `apiFetch`
+### Pad Editor
+- Auto-save with 800 ms debounce
+- Rate-limit feedback (429 → amber warning in header)
+- Method picker UI on lock screen and encrypt form
+- Key held in React ref; autosave re-encrypts on every edit
 
 ---
 
 ## Differentiators (target)
 
-- **End-to-end encryption** — content encrypted in browser before upload; server stores ciphertext only
-- **Multiple login alternatives** — SIWE (done), email/password, OAuth Google
+- **Multiple key derivation methods** — password (done), SIWE wallet (done), OAuth Google, Microsoft (planned)
 - **Premium tier** — unlimited TTL, larger file size limits, local LLM file analysis

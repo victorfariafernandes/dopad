@@ -16,15 +16,15 @@ func New(pads store.PadStore) *Service {
 	return &Service{pads: pads}
 }
 
-func (s *Service) Get(slug string) (string, error) {
-	content, ok := s.pads.Get(slug)
+func (s *Service) Get(slug string) (store.Pad, error) {
+	pad, ok := s.pads.Get(slug)
 	if !ok {
-		return "", ErrNotFound
+		return store.Pad{}, ErrNotFound
 	}
-	return content, nil
+	return pad, nil
 }
 
-func (s *Service) Set(slug, content string) error {
-	s.pads.Set(slug, content)
+func (s *Service) Set(slug string, pad store.Pad) error {
+	s.pads.Set(slug, pad)
 	return nil
 }

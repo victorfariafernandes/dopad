@@ -7,8 +7,18 @@ import (
 	"net/http"
 	"strings"
 
+	"no-trust-cms-backend/adapters/store"
+	"no-trust-cms-backend/encryption"
 	padsvc "no-trust-cms-backend/services/pad"
 )
+
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Printf("writeJSON encode error: %v", err)
+	}
+}
 
 type PadHandler struct {
 	svc *padsvc.Service
@@ -35,18 +45,32 @@ func (h *PadHandler) Register(
 	}))
 }
 
+type padResponse struct {
+	Slug       string             `json:"slug"`
+	Content    string             `json:"content"`
+	Encrypted  bool               `json:"encrypted"`
+	VerifyBlob string             `json:"verify_blob"`
+	DeriverId  encryption.Deriver `json:"deriver_id"`
+}
+
 func (h *PadHandler) HandleGet(w http.ResponseWriter, r *http.Request) {
 	slug := slugFrom(r)
 	if slug == "" {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing slug"})
 		return
 	}
-	content, err := h.svc.Get(slug)
+	pad, err := h.svc.Get(slug)
 	if errors.Is(err, padsvc.ErrNotFound) {
 		writeJSON(w, http.StatusNotFound, map[string]string{"error": "pad not found"})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"slug": slug, "content": content})
+	writeJSON(w, http.StatusOK, padResponse{
+		Slug:       slug,
+		Content:    pad.Content,
+		Encrypted:  pad.Encrypted,
+		VerifyBlob: pad.VerifyBlob,
+		DeriverId:  pad.DeriverId,
+	})
 }
 
 func (h *PadHandler) HandleSet(w http.ResponseWriter, r *http.Request) {
@@ -56,18 +80,33 @@ func (h *PadHandler) HandleSet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body struct {
-		Content string `json:"content"`
+		Content    string             `json:"content"`
+		Encrypted  bool               `json:"encrypted"`
+		VerifyBlob string             `json:"verify_blob"`
+		DeriverId  encryption.Deriver `json:"deriver_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid body"})
 		return
 	}
-	if err := h.svc.Set(slug, body.Content); err != nil {
+	pad := store.Pad{
+		Content:    body.Content,
+		Encrypted:  body.Encrypted,
+		VerifyBlob: body.VerifyBlob,
+		DeriverId:  body.DeriverId,
+	}
+	if err := h.svc.Set(slug, pad); err != nil {
 		log.Printf("Set pad %q: %v", slug, err)
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "internal error"})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]string{"slug": slug, "content": body.Content})
+	writeJSON(w, http.StatusOK, padResponse{
+		Slug:       slug,
+		Content:    pad.Content,
+		Encrypted:  pad.Encrypted,
+		VerifyBlob: pad.VerifyBlob,
+		DeriverId:  pad.DeriverId,
+	})
 }
 
 func slugFrom(r *http.Request) string {

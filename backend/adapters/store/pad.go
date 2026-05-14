@@ -1,30 +1,41 @@
 package store
 
-import "sync"
+import (
+	"sync"
+
+	"no-trust-cms-backend/encryption"
+)
+
+type Pad struct {
+	Content    string
+	Encrypted  bool
+	VerifyBlob string
+	DeriverId  encryption.Deriver // "" for unencrypted pads
+}
 
 type PadStore interface {
-	Get(slug string) (content string, ok bool)
-	Set(slug, content string)
+	Get(slug string) (Pad, bool)
+	Set(slug string, pad Pad)
 }
 
 type MemoryPadStore struct {
 	mu   sync.RWMutex
-	pads map[string]string
+	pads map[string]Pad
 }
 
 func NewMemoryPadStore() *MemoryPadStore {
-	return &MemoryPadStore{pads: make(map[string]string)}
+	return &MemoryPadStore{pads: make(map[string]Pad)}
 }
 
-func (s *MemoryPadStore) Get(slug string) (string, bool) {
+func (s *MemoryPadStore) Get(slug string) (Pad, bool) {
 	s.mu.RLock()
-	content, ok := s.pads[slug]
+	pad, ok := s.pads[slug]
 	s.mu.RUnlock()
-	return content, ok
+	return pad, ok
 }
 
-func (s *MemoryPadStore) Set(slug, content string) {
+func (s *MemoryPadStore) Set(slug string, pad Pad) {
 	s.mu.Lock()
-	s.pads[slug] = content
+	s.pads[slug] = pad
 	s.mu.Unlock()
 }
