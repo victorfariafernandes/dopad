@@ -37,6 +37,7 @@ jobs:
   frontend:
     name: Static Bundle → Release Asset
     runs-on: ubuntu-latest
+    environment: production
     permissions:
       contents: write
     steps:
