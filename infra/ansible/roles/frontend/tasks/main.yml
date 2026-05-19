@@ -1,0 +1,28 @@
+---
+- name: Get latest release tag from GitHub API
+  uri:
+    url: "https://api.github.com/repos/{{ github_owner }}/dopad/releases/latest"
+    return_content: true
+  register: github_release
+
+- name: Set frontend_version from latest release
+  set_fact:
+    frontend_version: "{{ github_release.json.tag_name }}"
+
+- name: Create frontend directory
+  file:
+    path: /data/frontend
+    state: directory
+    mode: "0755"
+
+- name: Download frontend release tarball
+  get_url:
+    url: "https://github.com/{{ github_owner }}/dopad/releases/download/{{ frontend_version }}/frontend-{{ frontend_version }}.tar.gz"
+    dest: "/tmp/frontend-{{ frontend_version }}.tar.gz"
+    mode: "0644"
+
+- name: Extract frontend
+  unarchive:
+    src: "/tmp/frontend-{{ frontend_version }}.tar.gz"
+    dest: /data/frontend
+    remote_src: true

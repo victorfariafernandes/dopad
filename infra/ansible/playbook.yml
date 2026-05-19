@@ -12,3 +12,5 @@
     - volume
     - docker
     - backend
+    - frontend
+    - caddy

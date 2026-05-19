@@ -1,0 +1,23 @@
+---
+- name: Add Caddy COPR repo
+  command: dnf copr enable -y @caddy/caddy
+  args:
+    creates: /etc/yum.repos.d/_copr:copr.fedorainfracloud.org:group_caddy:caddy.repo
+
+- name: Install Caddy
+  dnf:
+    name: caddy
+    state: present
+
+- name: Deploy Caddyfile
+  template:
+    src: Caddyfile.j2
+    dest: /etc/caddy/Caddyfile
+    mode: "0644"
+  notify: Reload Caddy
+
+- name: Enable and start Caddy
+  systemd:
+    name: caddy
+    enabled: true
+    state: started
