@@ -2,7 +2,7 @@
     tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
 
     root * /data/frontend
-    try_files {path} {path}.html /index.html
+    try_files {path} {path}/index.html {path}.html /index.html
     file_server
 }
 

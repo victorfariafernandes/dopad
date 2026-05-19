@@ -42,6 +42,16 @@
     group: caddy
   notify: Reload Caddy
 
+- name: Set SELinux context on frontend directory
+  community.general.sefcontext:
+    target: '/data/frontend(/.*)?'
+    setype: httpd_sys_content_t
+    state: present
+
+- name: Apply SELinux context to frontend files
+  command: restorecon -Rv /data/frontend
+  changed_when: false
+
 - name: Deploy Caddyfile
   template:
     src: Caddyfile.j2
