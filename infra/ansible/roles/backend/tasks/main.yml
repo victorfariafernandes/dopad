@@ -1,0 +1,23 @@
+---
+- name: Copy env file
+  template:
+    src: zeropad.env.j2
+    dest: /etc/zeropad.env
+    mode: "0600"
+
+- name: Pull latest backend image
+  community.docker.docker_image:
+    name: "ghcr.io/{{ github_owner }}/dopad-backend:latest"
+    source: pull
+
+- name: Run backend container
+  community.docker.docker_container:
+    name: zeropad-backend
+    image: "ghcr.io/{{ github_owner }}/dopad-backend:latest"
+    state: started
+    restart_policy: always
+    ports:
+      - "8080:8080"
+    env_file: /etc/zeropad.env
+    volumes:
+      - /data:/data

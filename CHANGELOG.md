@@ -18,6 +18,34 @@ This file is maintained by AI agents. Every time an agent makes any change to th
 
 ---
 
+## 2026-05-17 — Add Terraform + Ansible IaC for OCI Always Free deployment (zeropad.dev)
+
+**Agent:** claude-sonnet-4-6
+**Files changed:**
+- `backend/main.go` — modified (read `ALLOW_ORIGIN` env var, default `http://localhost:3000`)
+- `backend/Dockerfile` — modified (`GOARCH=amd64` → `GOARCH=arm64` for Ampere A1 VM)
+- `.github/workflows/release.yml` — modified (add `platforms: linux/arm64` to Docker build)
+- `infra/terraform/.gitignore` — added
+- `infra/terraform/terraform.tfvars.example` — added
+- `infra/terraform/variables.tf` — added
+- `infra/terraform/main.tf` — added (OCI + Cloudflare providers, image datasource)
+- `infra/terraform/networking.tf` — added (VCN, IGW, route table, security list, subnet)
+- `infra/terraform/storage.tf` — added (50 GB block volume, `zeropad-pads` Object Storage bucket)
+- `infra/terraform/compute.tf` — added (Ampere A1 VM + block volume attachment)
+- `infra/terraform/loadbalancer.tf` — added (OCI Flexible LB 10 Mbps, backend set, HTTP listener)
+- `infra/terraform/cloudflare.tf` — added (A record + www CNAME for `zeropad.dev`, proxied)
+- `infra/terraform/outputs.tf` — added
+- `infra/ansible/inventory.ini` — added
+- `infra/ansible/playbook.yml` — added
+- `infra/ansible/roles/volume/tasks/main.yml` — added (format + mount block volume to /data)
+- `infra/ansible/roles/docker/tasks/main.yml` — added (install Docker CE on Oracle Linux 9)
+- `infra/ansible/roles/backend/tasks/main.yml` — added (pull + run dopad-backend container)
+- `infra/ansible/roles/backend/templates/zeropad.env.j2` — added
+
+**Why:** User requested IaC for OCI Always Free tier ($0/month): 1 Ampere A1 VM, OCI Flexible LB, Object Storage bucket, 50 GB block volume, Cloudflare CDN/DNS for `zeropad.dev`. Terraform provisions infrastructure; Ansible configures the server.
+
+---
+
 ## 2026-05-14 — Add GitHub Releases CI/CD pipeline with Docker image and static frontend bundle
 
 **Agent:** claude-sonnet-4-6

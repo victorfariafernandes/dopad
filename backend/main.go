@@ -4,6 +4,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 
 	httpadapter "dopad-backend/adapters/http"
 	"dopad-backend/adapters/store"
@@ -15,8 +16,13 @@ func main() {
 	padStore := store.NewMemoryPadStore()
 	padHandler := httpadapter.NewPadHandler(padsvc.New(padStore))
 
+	origin := os.Getenv("ALLOW_ORIGIN")
+	if origin == "" {
+		origin = "http://localhost:3000"
+	}
+
 	mux := http.NewServeMux()
-	cors := middlewares.CORS("http://localhost:3000")
+	cors := middlewares.CORS(origin)
 	writeLimiter := middlewares.NewRateLimit(10)
 
 	padHandler.Register(mux, cors, writeLimiter)

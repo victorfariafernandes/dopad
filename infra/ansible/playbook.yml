@@ -1,0 +1,14 @@
+---
+- name: Configure zeropad VM
+  hosts: zeropad
+  become: true
+  vars:
+    domain: "zeropad.dev"
+    github_owner: "victorfariafernandes"
+    block_device: /dev/sdb
+    data_mount: /data
+
+  roles:
+    - volume
+    - docker
+    - backend

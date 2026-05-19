@@ -1,0 +1,34 @@
+---
+- name: Install XFS tools
+  dnf:
+    name: xfsprogs
+    state: present
+
+- name: Wait for block volume device
+  wait_for:
+    path: "{{ block_device }}"
+    timeout: 60
+
+- name: Check if volume is already formatted
+  command: blkid -o value -s TYPE {{ block_device }}
+  register: blkid_out
+  changed_when: false
+  failed_when: false
+
+- name: Format block volume as XFS
+  command: mkfs.xfs -f {{ block_device }}
+  when: blkid_out.stdout == ""
+
+- name: Create mount point
+  file:
+    path: "{{ data_mount }}"
+    state: directory
+    mode: "0755"
+
+- name: Mount block volume and persist in fstab
+  mount:
+    path: "{{ data_mount }}"
+    src: "{{ block_device }}"
+    fstype: xfs
+    opts: defaults,_netdev,nofail
+    state: mounted
