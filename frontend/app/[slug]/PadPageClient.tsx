@@ -1,12 +1,14 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { PadEditor } from "./PadEditor";
 
-function slugFromPath(): string {
-  const slug = window.location.pathname.slice(1);
-  return slug || "_";
-}
-
 export function PadPageClient() {
-  return <PadEditor slug={slugFromPath()} />;
+  const [slug, setSlug] = useState<string>("_");
+
+  useEffect(() => {
+    setSlug(window.location.pathname.slice(1) || "_");
+  }, []);
+
+  return <PadEditor slug={slug} />;
 }

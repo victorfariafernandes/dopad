@@ -339,3 +339,15 @@ This file is maintained by AI agents. Every time an agent makes any change to th
 - Added `.claude/skills/test.md` — skill that runs Go tests, frontend tests, and Cypress E2E integration tests
 
 **Why:** User requested an AI playbook documenting the dopad project architecture, plus a code review skill and a test run skill.
+
+---
+
+## 2026-05-19 — Fix window access during static prerendering
+
+**Agent:** claude-sonnet-4-6
+**Files changed:** `frontend/app/[slug]/PadPageClient.tsx`
+
+**What changed:**
+- Replaced direct `window.location.pathname` call with `useEffect` + `useState` to defer slug resolution to client-side hydration
+
+**Why:** Next.js static export prerendered `/_` and threw `ReferenceError: window is not defined` because `window` is not available at build time.
