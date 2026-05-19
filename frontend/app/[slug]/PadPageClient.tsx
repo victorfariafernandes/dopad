@@ -1,9 +1,12 @@
 "use client";
 
-import { useParams } from "next/navigation";
 import { PadEditor } from "./PadEditor";
 
+function slugFromPath(): string {
+  const slug = window.location.pathname.slice(1);
+  return slug || "_";
+}
+
 export function PadPageClient() {
-  const { slug } = useParams<{ slug: string }>();
-  return <PadEditor slug={slug} />;
+  return <PadEditor slug={slugFromPath()} />;
 }
