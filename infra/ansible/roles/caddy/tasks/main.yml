@@ -9,6 +9,39 @@
     name: caddy
     state: present
 
+- name: Open HTTPS in firewalld
+  firewalld:
+    service: https
+    permanent: true
+    state: enabled
+    immediate: true
+
+- name: Create cert directory
+  file:
+    path: /etc/caddy/certs
+    state: directory
+    mode: "0700"
+    owner: caddy
+    group: caddy
+
+- name: Deploy origin certificate
+  copy:
+    src: "{{ playbook_dir }}/files/origin.pem"
+    dest: /etc/caddy/certs/origin.pem
+    mode: "0644"
+    owner: caddy
+    group: caddy
+  notify: Reload Caddy
+
+- name: Deploy origin private key
+  copy:
+    src: "{{ playbook_dir }}/files/origin.key"
+    dest: /etc/caddy/certs/origin.key
+    mode: "0600"
+    owner: caddy
+    group: caddy
+  notify: Reload Caddy
+
 - name: Deploy Caddyfile
   template:
     src: Caddyfile.j2

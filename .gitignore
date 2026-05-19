@@ -39,3 +39,7 @@ frontend/.vercel
 # typescript
 frontend/*.tsbuildinfo
 frontend/next-env.d.ts
+
+# ansible secrets
+infra/ansible/files/origin.pem
+infra/ansible/files/origin.key
