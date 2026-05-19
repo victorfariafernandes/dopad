@@ -2,8 +2,19 @@
     tls /etc/caddy/certs/origin.pem /etc/caddy/certs/origin.key
 
     root * /data/frontend
-    try_files {path} {path}/index.html {path}.html /index.html
-    file_server
+
+    @unknown_rsc {
+        not file
+        path *.txt
+    }
+    rewrite @unknown_rsc /_.txt
+
+    @notFile not file
+    rewrite @notFile /_.html
+
+    file_server {
+        index index.html
+    }
 }
 
 api.{{ domain }} {
