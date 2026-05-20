@@ -351,3 +351,16 @@ This file is maintained by AI agents. Every time an agent makes any change to th
 - Replaced direct `window.location.pathname` call with `useEffect` + `useState` to defer slug resolution to client-side hydration
 
 **Why:** Next.js static export prerendered `/_` and threw `ReferenceError: window is not defined` because `window` is not available at build time.
+
+---
+
+## 2026-05-19 — Rebrand UI from dopad to zeropad
+
+**Agent:** claude-sonnet-4-6
+**Files changed:** `frontend/app/page.tsx`, `frontend/app/[slug]/PadEditor.tsx`
+
+**What changed:**
+- Updated h1 on home page from "dopad" to "zeropad"
+- Updated both header Link labels in PadEditor from "dopad" to "zeropad"
+
+**Why:** User requested the frontend display "zeropad" instead of "dopad". Crypto protocol constants in crypto.ts left unchanged to preserve compatibility with existing encrypted pads.

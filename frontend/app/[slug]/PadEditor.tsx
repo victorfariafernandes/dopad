@@ -213,7 +213,7 @@ export function PadEditor({ slug }: { slug: string }) {
       <div className="flex flex-col flex-1 min-h-screen">
         <header className="flex items-center justify-between px-4 py-3 border-b border-black/10 dark:border-white/10">
           <Link href="/" className="text-sm font-semibold tracking-tight">
-            dopad
+            zeropad
           </Link>
           <span className="font-mono text-sm text-zinc-500">/{slug}</span>
         </header>
@@ -277,7 +277,7 @@ export function PadEditor({ slug }: { slug: string }) {
     <div className="flex flex-col flex-1 min-h-screen">
       <header className="flex items-center justify-between px-4 py-3 border-b border-black/10 dark:border-white/10">
         <Link href="/" className="text-sm font-semibold tracking-tight">
-          dopad
+          zeropad
         </Link>
         <div className="flex items-center gap-3">
           <span className="font-mono text-sm text-zinc-500">/{slug}</span>

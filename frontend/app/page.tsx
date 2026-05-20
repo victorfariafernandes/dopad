@@ -16,7 +16,7 @@ export default function Home() {
   return (
     <div className="flex flex-col flex-1 items-center justify-center p-8">
       <main className="flex flex-col items-center gap-6 w-full max-w-md">
-        <h1 className="text-4xl font-semibold tracking-tight">dopad</h1>
+        <h1 className="text-4xl font-semibold tracking-tight">zeropad</h1>
         <p className="text-sm text-zinc-500">any url is a pad</p>
         <div className="flex gap-2 w-full">
           <input
