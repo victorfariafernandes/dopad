@@ -3,7 +3,7 @@ package store
 import (
 	"sync"
 
-	"dopad-backend/encryption"
+	"zeropad-backend/encryption"
 )
 
 type Pad struct {

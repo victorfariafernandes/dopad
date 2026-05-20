@@ -364,3 +364,16 @@ This file is maintained by AI agents. Every time an agent makes any change to th
 - Updated both header Link labels in PadEditor from "dopad" to "zeropad"
 
 **Why:** User requested the frontend display "zeropad" instead of "dopad". Crypto protocol constants in crypto.ts left unchanged to preserve compatibility with existing encrypted pads.
+
+---
+
+## 2026-05-20 — Rename crypto sentinel strings from dopad to zeropad
+
+**Agent:** claude-sonnet-4-6
+**Files changed:** `frontend/app/_lib/crypto.ts`
+
+**What changed:**
+- Renamed `"dopad-verified:"` sentinel to `"zeropad-verified:"` in `makeVerifyBlob` and `checkVerifyBlob`
+- Renamed `"dopad encrypt:"` SIWE signing message prefix to `"zeropad encrypt:"`
+
+**Why:** App not yet in production; safe to update protocol constants to match the zeropad brand.

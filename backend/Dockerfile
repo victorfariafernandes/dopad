@@ -4,9 +4,9 @@ COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux \
-    go build -ldflags="-w -s" -o dopad-backend .
+    go build -ldflags="-w -s" -o zeropad-backend .
 
 FROM gcr.io/distroless/static-debian12
-COPY --from=builder /app/dopad-backend /dopad-backend
+COPY --from=builder /app/zeropad-backend /zeropad-backend
 EXPOSE 8080
-ENTRYPOINT ["/dopad-backend"]
+ENTRYPOINT ["/zeropad-backend"]

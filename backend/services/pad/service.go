@@ -3,7 +3,7 @@ package pad
 import (
 	"errors"
 
-	"dopad-backend/adapters/store"
+	"zeropad-backend/adapters/store"
 )
 
 var ErrNotFound = errors.New("pad not found")

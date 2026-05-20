@@ -7,13 +7,13 @@
 
 - name: Pull latest backend image
   community.docker.docker_image:
-    name: "ghcr.io/{{ github_owner }}/dopad-backend:latest"
+    name: "ghcr.io/{{ github_owner }}/zeropad-backend:latest"
     source: pull
 
 - name: Run backend container
   community.docker.docker_container:
     name: zeropad-backend
-    image: "ghcr.io/{{ github_owner }}/dopad-backend:latest"
+    image: "ghcr.io/{{ github_owner }}/zeropad-backend:latest"
     state: started
     restart_policy: always
     ports:

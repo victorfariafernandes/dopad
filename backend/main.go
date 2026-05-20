@@ -6,10 +6,10 @@ import (
 	"net/http"
 	"os"
 
-	httpadapter "dopad-backend/adapters/http"
-	"dopad-backend/adapters/store"
-	"dopad-backend/middlewares"
-	padsvc "dopad-backend/services/pad"
+	httpadapter "zeropad-backend/adapters/http"
+	"zeropad-backend/adapters/store"
+	"zeropad-backend/middlewares"
+	padsvc "zeropad-backend/services/pad"
 )
 
 func main() {

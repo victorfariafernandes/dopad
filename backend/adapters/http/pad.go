@@ -7,9 +7,9 @@ import (
 	"net/http"
 	"strings"
 
-	"dopad-backend/adapters/store"
-	"dopad-backend/encryption"
-	padsvc "dopad-backend/services/pad"
+	"zeropad-backend/adapters/store"
+	"zeropad-backend/encryption"
+	padsvc "zeropad-backend/services/pad"
 )
 
 func writeJSON(w http.ResponseWriter, status int, v any) {

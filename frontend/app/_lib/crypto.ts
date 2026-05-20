@@ -8,7 +8,7 @@ export async function deriveKey(password: string): Promise<CryptoKey> {
   ]);
 }
 
-// Returns base64( salt[16] || iv[12] || AES-GCM("dopad-verified:" + hex(salt)) )
+// Returns base64( salt[16] || iv[12] || AES-GCM("zeropad-verified:" + hex(salt)) )
 // iv is a random 12-byte nonce required by AES-GCM; prepended to ciphertext so decryption can recover it
 export async function makeVerifyBlob(key: CryptoKey): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
@@ -18,7 +18,7 @@ export async function makeVerifyBlob(key: CryptoKey): Promise<string> {
     await crypto.subtle.encrypt(
       { name: "AES-GCM", iv },
       key,
-      new TextEncoder().encode("dopad-verified:" + saltHex),
+      new TextEncoder().encode("zeropad-verified:" + saltHex),
     ),
   );
   return toBase64(concat(salt, iv, ct));
@@ -35,7 +35,7 @@ export async function checkVerifyBlob(
     const iv = bytes.slice(16, 28);
     const ct = bytes.slice(28);
     const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, ct);
-    return new TextDecoder().decode(pt) === "dopad-verified:" + bytesToHex(salt);
+    return new TextDecoder().decode(pt) === "zeropad-verified:" + bytesToHex(salt);
   } catch {
     return false;
   }
@@ -144,7 +144,7 @@ class SIWEKeyDeriver implements KeyDeriver {
     );
     const signer = await provider.getSigner();
     const address = await signer.getAddress();
-    const message = `dopad encrypt: ${ctx.slug}\nWallet: ${address}`;
+    const message = `zeropad encrypt: ${ctx.slug}\nWallet: ${address}`;
     const signature = await signer.signMessage(message);
     const keyBytes = sha3_256(new TextEncoder().encode(signature));
     return crypto.subtle.importKey(
