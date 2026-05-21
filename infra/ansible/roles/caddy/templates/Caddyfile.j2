@@ -9,7 +9,7 @@
     }
     rewrite @unknown_rsc /_.txt
 
-    @notFile not file
+    @notFile not file {path} {path}/index.html
     rewrite @notFile /_.html
 
     file_server {
