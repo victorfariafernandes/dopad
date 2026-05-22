@@ -32,7 +32,7 @@ resource "oci_core_instance" "this" {
   }
 
   metadata = {
-    ssh_authorized_keys = var.ssh_public_key
+    ssh_authorized_keys = "${var.ssh_public_key}\n${var.ssh_deploy_public_key}"
   }
 
   preserve_boot_volume = false

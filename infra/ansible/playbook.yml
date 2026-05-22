@@ -10,8 +10,13 @@
     oci_namespace: "{{ lookup('env', 'OCI_NAMESPACE') }}"
 
   roles:
-    - volume
-    - docker
-    - backend
-    - frontend
-    - caddy
+    - role: volume
+      tags: volume
+    - role: docker
+      tags: docker
+    - role: backend
+      tags: backend
+    - role: frontend
+      tags: frontend
+    - role: caddy
+      tags: caddy

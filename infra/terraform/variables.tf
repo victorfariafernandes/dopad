@@ -34,6 +34,11 @@ variable "ssh_public_key" {
   type        = string
 }
 
+variable "ssh_deploy_public_key" {
+  description = "SSH public key for the CI/CD deploy pipeline."
+  type        = string
+}
+
 variable "vm_ocpus" {
   description = "Number of OCPUs for the Ampere A1 shape."
   type        = number

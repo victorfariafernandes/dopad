@@ -48,6 +48,16 @@ cd frontend && pnpm dev
 - `@/` path alias for all internal TypeScript imports — no `../../` paths
 - `http.StatusXxx` constants only — no raw integers in Go
 
+## Security
+
+Never read, print, or include the contents of any file that may contain secrets or environment-specific values. This includes:
+
+- `**/*.tfvars` — Terraform variable files
+- `**/.env`, `**/.env.*` — environment files
+- Any file named `secrets.*`, `credentials.*`, or similar
+
+If a task requires knowing a value from one of these files, ask the user to provide the specific value directly instead of reading the file.
+
 ## Docs
 
 Read the relevant doc before touching a feature area:

@@ -89,7 +89,8 @@ module "compute" {
   subnet_id           = module.networking.subnet_id
   volume_id           = module.storage.volume_id
   image_id            = data.oci_core_images.ol9_arm.images[0].id
-  ssh_public_key      = var.ssh_public_key
+  ssh_public_key        = var.ssh_public_key
+  ssh_deploy_public_key = var.ssh_deploy_public_key
   vm_ocpus            = var.vm_ocpus
   vm_memory_gbs       = var.vm_memory_gbs
 }

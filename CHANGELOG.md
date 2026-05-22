@@ -18,6 +18,25 @@ This file is maintained by AI agents. Every time an agent makes any change to th
 
 ---
 
+## 2026-05-22 — Add production deploy pipeline (workflow_dispatch with version bump)
+
+**Agent:** claude-sonnet-4-6
+**Files changed:**
+- `.github/workflows/deploy.yml` — added (new manual deploy workflow)
+- `infra/ansible/playbook.yml` — modified (role-level tags for selective execution)
+- `infra/ansible/roles/backend/tasks/main.yml` — modified (added `recreate: true` to docker_container task)
+
+**What changed:**
+- New `Deploy to Production` GitHub Actions workflow with `workflow_dispatch` trigger
+- Inputs: `version_bump` dropdown (patch/minor/major) and `release_notes` text field
+- Three sequential jobs: `tag` (bumps semver, creates annotated git tag), `build` (Docker image + frontend tarball + GitHub Release), `deploy` (Ansible with `--tags backend,frontend`)
+- Ansible playbook roles now have explicit tags so only backend/frontend are re-run on deploy
+- Backend `docker_container` task uses `recreate: true` to always pick up newly pulled image
+
+**Why:** No automated way to create releases or deploy to production; required manually tagging, building, and SSHing to update the server.
+
+---
+
 ## 2026-05-21 — Replace in-memory pad store with OCI Object Storage
 
 **Agent:** claude-sonnet-4-6

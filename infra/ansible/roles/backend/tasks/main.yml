@@ -15,6 +15,7 @@
     name: zeropad-backend
     image: "ghcr.io/{{ github_owner }}/zeropad-backend:latest"
     state: started
+    recreate: true
     restart_policy: always
     ports:
       - "8080:8080"
