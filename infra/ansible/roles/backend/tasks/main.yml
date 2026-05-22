@@ -14,15 +14,18 @@
   debug:
     msg: "Backend deploying version: {{ release_tag }}"
 
-- name: Run backend container
+- name: Run backend containers
   community.docker.docker_container:
-    name: zeropad-backend
+    name: "zeropad-backend-{{ item }}"
     image: "ghcr.io/{{ github_owner }}/zeropad-backend:{{ release_tag }}"
     state: started
     recreate: true
     restart_policy: always
+    memory: "{{ backend_memory }}"
+    memory_reservation: "{{ backend_memory_reservation }}"
     ports:
-      - "8080:8080"
+      - "{{ 8080 + item }}:8080"
     env_file: /etc/zeropad.env
     volumes:
       - /data:/data
+  loop: "{{ range(0, backend_replicas) | list }}"

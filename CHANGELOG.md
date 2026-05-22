@@ -18,6 +18,25 @@ This file is maintained by AI agents. Every time an agent makes any change to th
 
 ---
 
+## 2026-05-22 — Horizontal scaling with multiple backend containers and Caddy load balancing
+
+**Agent:** claude-sonnet-4-6
+**Files changed:**
+- `infra/ansible/playbook.yml` — added `backend_replicas`, `backend_memory`, `backend_memory_reservation` vars
+- `infra/ansible/roles/backend/tasks/main.yml` — replaced single container task with N-replica loop; added legacy container removal; added memory limits
+- `infra/ansible/roles/caddy/templates/Caddyfile.j2` — replaced hard-coded `reverse_proxy localhost:8080` with dynamic round-robin upstream list
+
+**What changed:**
+- Backend now starts `backend_replicas` containers (default: 2) named `zeropad-backend-0`, `zeropad-backend-1`, etc., on sequential ports (8080, 8081, …)
+- Each container has a 256 MB hard memory limit and 128 MB soft reservation
+- Caddy load balances across all replicas using round-robin
+- Legacy `zeropad-backend` container (no suffix) is stopped and removed on first deploy
+- All scaling knobs (`backend_replicas`, `backend_memory`, `backend_memory_reservation`) are playbook vars
+
+**Why:** Scale the backend horizontally to handle more traffic on the single OCI VM
+
+---
+
 ## 2026-05-22 — Add production deploy pipeline (workflow_dispatch with version bump)
 
 **Agent:** claude-sonnet-4-6

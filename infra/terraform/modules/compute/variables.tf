@@ -47,5 +47,5 @@ variable "vm_ocpus" {
 variable "vm_memory_gbs" {
   description = "RAM in GB for the Ampere A1 shape."
   type        = number
-  default     = 24
+  default     = 8
 }
