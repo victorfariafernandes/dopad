@@ -5,15 +5,19 @@
     dest: /etc/zeropad.env
     mode: "0600"
 
-- name: Pull latest backend image
+- name: Pull backend image
   community.docker.docker_image:
-    name: "ghcr.io/{{ github_owner }}/zeropad-backend:latest"
+    name: "ghcr.io/{{ github_owner }}/zeropad-backend:{{ release_tag }}"
     source: pull
+
+- name: Show backend version
+  debug:
+    msg: "Backend deploying version: {{ release_tag }}"
 
 - name: Run backend container
   community.docker.docker_container:
     name: zeropad-backend
-    image: "ghcr.io/{{ github_owner }}/zeropad-backend:latest"
+    image: "ghcr.io/{{ github_owner }}/zeropad-backend:{{ release_tag }}"
     state: started
     recreate: true
     restart_policy: always

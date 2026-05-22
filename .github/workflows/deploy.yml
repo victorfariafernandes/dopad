@@ -143,4 +143,5 @@ jobs:
         run: |
           ansible-playbook playbook.yml \
             -i inventory.prod.ini \
-            --tags backend,frontend
+            --tags backend,frontend \
+            --extra-vars "release_tag=${{ needs.tag.outputs.new_tag }}"
