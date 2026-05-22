@@ -18,6 +18,32 @@ This file is maintained by AI agents. Every time an agent makes any change to th
 
 ---
 
+## 2026-05-21 — Replace in-memory pad store with OCI Object Storage
+
+**Agent:** claude-sonnet-4-6
+**Files changed:**
+- `backend/adapters/store/oci.go` — added (OCIPadStore implementing PadStore via OCI Object Storage)
+- `backend/adapters/store/pad.go` — modified (added json tags to Pad struct)
+- `backend/main.go` — modified (added selectStore() — uses OCIPadStore when OCI_BUCKET_NAME+OCI_NAMESPACE set, else MemoryPadStore)
+- `backend/go.mod` + `backend/go.sum` — modified (added github.com/oracle/oci-go-sdk/v65, go 1.21→1.24)
+- `infra/terraform/modules/compute/main.tf` — modified (added oci_identity_dynamic_group for Instance Principal auth)
+- `infra/terraform/modules/compute/variables.tf` — modified (added tenancy_ocid variable)
+- `infra/terraform/modules/compute/outputs.tf` — modified (added backend_dynamic_group_name output)
+- `infra/terraform/main.tf` — modified (added oci_identity_policy for bucket access, pass tenancy_ocid to compute module)
+- `infra/ansible/roles/backend/templates/zeropad.env.j2` — modified (added OCI_BUCKET_NAME and OCI_NAMESPACE)
+- `infra/ansible/playbook.yml` — modified (added oci_namespace var from OCI_NAMESPACE env)
+
+**What changed:**
+- Added OCIPadStore backed by `zeropad-pads` OCI Object Storage bucket; each pad stored as JSON object named by slug
+- Instance Principal auth (no credentials in container) with API key env var fallback for local dev
+- selectStore() in main.go picks OCI store when env vars present, falls back to memory for local dev
+- Terraform provisions IAM dynamic group + policy granting the VM least-privilege access to bucket objects
+- Ansible template now injects OCI_BUCKET_NAME and OCI_NAMESPACE into the backend container env
+
+**Why:** Pads were lost on server restart; connect the already-provisioned OCI bucket to make storage persistent.
+
+---
+
 ## 2026-05-17 — Add Terraform + Ansible IaC for OCI Always Free deployment (zeropad.dev)
 
 **Agent:** claude-sonnet-4-6

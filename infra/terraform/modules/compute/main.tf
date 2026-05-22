@@ -38,6 +38,13 @@ resource "oci_core_instance" "this" {
   preserve_boot_volume = false
 }
 
+resource "oci_identity_dynamic_group" "backend" {
+  compartment_id = var.tenancy_ocid
+  name           = "zeropad-backend"
+  description    = "zeropad backend VM for Instance Principal auth"
+  matching_rule  = "instance.id = '${oci_core_instance.this.id}'"
+}
+
 resource "oci_core_volume_attachment" "data" {
   attachment_type = "paravirtualized"
   instance_id     = oci_core_instance.this.id

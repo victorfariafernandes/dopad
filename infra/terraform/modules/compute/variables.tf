@@ -3,6 +3,11 @@ variable "compartment_ocid" {
   type        = string
 }
 
+variable "tenancy_ocid" {
+  description = "OCI tenancy OCID (required for dynamic group at tenancy root)."
+  type        = string
+}
+
 variable "availability_domain" {
   description = "OCI availability domain name."
   type        = string

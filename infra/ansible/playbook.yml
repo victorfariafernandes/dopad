@@ -7,6 +7,7 @@
     github_owner: "victorfariafernandes"
     block_device: /dev/sdb
     data_mount: /data
+    oci_namespace: "{{ lookup('env', 'OCI_NAMESPACE') }}"
 
   roles:
     - volume

@@ -84,6 +84,7 @@ module "storage" {
 module "compute" {
   source              = "./modules/compute"
   compartment_ocid    = var.compartment_ocid
+  tenancy_ocid        = var.tenancy_ocid
   availability_domain = local.availability_domain
   subnet_id           = module.networking.subnet_id
   volume_id           = module.storage.volume_id
@@ -91,6 +92,15 @@ module "compute" {
   ssh_public_key      = var.ssh_public_key
   vm_ocpus            = var.vm_ocpus
   vm_memory_gbs       = var.vm_memory_gbs
+}
+
+resource "oci_identity_policy" "backend_object_storage" {
+  compartment_id = var.compartment_ocid
+  name           = "zeropad-backend-object-storage"
+  description    = "Allow backend VM to manage objects in pads bucket"
+  statements = [
+    "Allow dynamic-group zeropad-backend to manage objects in compartment id ${var.compartment_ocid} where target.bucket.name = 'zeropad-pads'",
+  ]
 }
 
 module "dns" {
