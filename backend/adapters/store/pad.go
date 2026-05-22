@@ -7,10 +7,11 @@ import (
 )
 
 type Pad struct {
-	Content    string             `json:"content"`
-	Encrypted  bool               `json:"encrypted"`
-	VerifyBlob string             `json:"verify_blob"`
-	DeriverId  encryption.Deriver `json:"deriver_id"`
+	Content          string             `json:"content"`
+	Encrypted        bool               `json:"encrypted"`
+	VerifyBlob       string             `json:"verify_blob"`
+	DeriverId        encryption.Deriver `json:"deriver_id"`
+	HashedWriteToken string             `json:"hashed_write_token"`
 }
 
 type PadStore interface {

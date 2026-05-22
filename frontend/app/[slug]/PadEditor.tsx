@@ -14,7 +14,7 @@ import {
   makeVerifyBlob,
 } from "@/app/_lib/crypto";
 import type { DeriverId } from "@/app/_lib/crypto";
-import { getPad, setPad } from "@/app/_lib/pads";
+import { getPad, getPadContent, setPad } from "@/app/_lib/pads";
 import { DeriverSelect } from "./DeriverSelect";
 
 type SaveState = "idle" | "saving" | "saved" | "rate-limited";
@@ -28,6 +28,7 @@ export function PadEditor({ slug }: { slug: string }) {
   const [verifyBlob, setVerifyBlob] = useState("");
   const [deriverId, setDeriverId] = useState<DeriverId | "">("");
   const encryptionKeyRef = useRef<CryptoKey | null>(null);
+  const writeTokenRef = useRef<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   // Locked state
@@ -71,19 +72,30 @@ export function PadEditor({ slug }: { slug: string }) {
     setUnlockError("");
     setUnlocking(true);
     try {
-      const key = await getPasswordDeriver(unlockPassword).deriveKey({ slug });
-      const valid = await checkVerifyBlob(key, verifyBlob);
+      const deriver = getPasswordDeriver(unlockPassword);
+      const [key, token] = await Promise.all([
+        deriver.deriveKey({ slug }),
+        deriver.deriveWriteToken({ slug }),
+      ]);
+      const fullPad = await getPadContent(slug, token);
+      const valid = await checkVerifyBlob(key, fullPad.verifyBlob);
       if (!valid) {
         setUnlockError("Wrong password. Try again.");
         return;
       }
-      const plaintext = await decryptText(key, content);
+      const plaintext = await decryptText(key, fullPad.content);
       encryptionKeyRef.current = key;
+      writeTokenRef.current = token;
+      setVerifyBlob(fullPad.verifyBlob);
       setContent(plaintext);
       setPadState("unlocked");
       setUnlockPassword("");
-    } catch {
-      setUnlockError("Decryption failed. Wrong password?");
+    } catch (err) {
+      if (err instanceof Error && err.message === "write token invalid") {
+        setUnlockError("Wrong password. Try again.");
+      } else {
+        setUnlockError("Decryption failed. Wrong password?");
+      }
     } finally {
       setUnlocking(false);
     }
@@ -94,18 +106,27 @@ export function PadEditor({ slug }: { slug: string }) {
     setUnlocking(true);
     try {
       const deriver = getDeriver(DERIVER_SIWE)!;
+      // deriveKey populates the cache; deriveWriteToken reuses it — one wallet popup
       const key = await deriver.deriveKey({ slug });
-      const valid = await checkVerifyBlob(key, verifyBlob);
+      const token = await deriver.deriveWriteToken({ slug });
+      const fullPad = await getPadContent(slug, token);
+      const valid = await checkVerifyBlob(key, fullPad.verifyBlob);
       if (!valid) {
         setUnlockError("Wrong wallet or pad. Try again.");
         return;
       }
-      const plaintext = await decryptText(key, content);
+      const plaintext = await decryptText(key, fullPad.content);
       encryptionKeyRef.current = key;
+      writeTokenRef.current = token;
+      setVerifyBlob(fullPad.verifyBlob);
       setContent(plaintext);
       setPadState("unlocked");
     } catch (err) {
-      setUnlockError(err instanceof Error ? err.message : "Wallet unlock failed.");
+      if (err instanceof Error && err.message === "write token invalid") {
+        setUnlockError("Wrong wallet or pad. Try again.");
+      } else {
+        setUnlockError(err instanceof Error ? err.message : "Wallet unlock failed.");
+      }
     } finally {
       setUnlocking(false);
     }
@@ -121,7 +142,7 @@ export function PadEditor({ slug }: { slug: string }) {
         const key = encryptionKeyRef.current;
         if (key) {
           const cipher = await encryptText(key, value);
-          await setPad(slug, { content: cipher, encrypted: true, verifyBlob, deriverId });
+          await setPad(slug, { content: cipher, encrypted: true, verifyBlob, deriverId, writeToken: writeTokenRef.current ?? undefined });
         } else {
           await setPad(slug, { content: value, encrypted: false, verifyBlob: "", deriverId: "" });
         }
@@ -129,6 +150,8 @@ export function PadEditor({ slug }: { slug: string }) {
       } catch (err) {
         if (err instanceof Error && err.message === "rate limit exceeded") {
           setSaveState("rate-limited");
+        } else if (err instanceof Error && err.message === "write token invalid") {
+          setSaveState("idle");
         } else {
           setSaveState("idle");
         }
@@ -150,11 +173,24 @@ export function PadEditor({ slug }: { slug: string }) {
     }
     setFormSaving(true);
     try {
-      const key = await getPasswordDeriver(formPassword).deriveKey({ slug });
+      const newDeriver = getPasswordDeriver(formPassword);
+      const [key, newToken] = await Promise.all([
+        newDeriver.deriveKey({ slug }),
+        newDeriver.deriveWriteToken({ slug }),
+      ]);
       const blob = await makeVerifyBlob(key);
       const cipher = await encryptText(key, content);
-      await setPad(slug, { content: cipher, encrypted: true, verifyBlob: blob, deriverId: DERIVER_PASSWORD });
+      const oldToken = writeTokenRef.current;
+      await setPad(slug, {
+        content: cipher,
+        encrypted: true,
+        verifyBlob: blob,
+        deriverId: DERIVER_PASSWORD,
+        writeToken: oldToken ?? newToken,
+        newWriteToken: oldToken !== null ? newToken : undefined,
+      });
       encryptionKeyRef.current = key;
+      writeTokenRef.current = newToken;
       setVerifyBlob(blob);
       setDeriverId(DERIVER_PASSWORD);
       setIsEncrypted(true);
@@ -162,8 +198,12 @@ export function PadEditor({ slug }: { slug: string }) {
       setFormPassword("");
       setFormConfirm("");
       setSaveState("saved");
-    } catch {
-      setFormError("Failed to encrypt. Try again.");
+    } catch (err) {
+      if (err instanceof Error && err.message === "write token invalid") {
+        setFormError("Write token rejected. Was the pad changed elsewhere?");
+      } else {
+        setFormError("Failed to encrypt. Try again.");
+      }
     } finally {
       setFormSaving(false);
     }
@@ -176,17 +216,31 @@ export function PadEditor({ slug }: { slug: string }) {
     try {
       const deriver = getDeriver(DERIVER_SIWE)!;
       const key = await deriver.deriveKey({ slug });
+      const newToken = await deriver.deriveWriteToken({ slug }); // cached — no second popup
       const blob = await makeVerifyBlob(key);
       const cipher = await encryptText(key, content);
-      await setPad(slug, { content: cipher, encrypted: true, verifyBlob: blob, deriverId: DERIVER_SIWE });
+      const oldToken = writeTokenRef.current;
+      await setPad(slug, {
+        content: cipher,
+        encrypted: true,
+        verifyBlob: blob,
+        deriverId: DERIVER_SIWE,
+        writeToken: oldToken ?? newToken,
+        newWriteToken: oldToken !== null ? newToken : undefined,
+      });
       encryptionKeyRef.current = key;
+      writeTokenRef.current = newToken;
       setVerifyBlob(blob);
       setDeriverId(DERIVER_SIWE);
       setIsEncrypted(true);
       setShowPasswordForm(false);
       setSaveState("saved");
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : "Wallet encryption failed.");
+      if (err instanceof Error && err.message === "write token invalid") {
+        setFormError("Write token rejected. Was the pad changed elsewhere?");
+      } else {
+        setFormError(err instanceof Error ? err.message : "Wallet encryption failed.");
+      }
     } finally {
       setFormSaving(false);
     }

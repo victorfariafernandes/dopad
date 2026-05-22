@@ -18,6 +18,32 @@ This file is maintained by AI agents. Every time an agent makes any change to th
 
 ---
 
+## 2026-05-22 — Write-token authentication for encrypted pads
+
+**Agent:** claude-sonnet-4-6
+**Files changed:**
+- `backend/middlewares/cors.go` — added `X-Write-Token` to allowed CORS headers
+- `backend/adapters/store/pad.go` — added `HashedWriteToken` field to `Pad` struct
+- `backend/adapters/http/pad.go` — two-phase GET (metadata-only vs full response), write token validation on PUT, `sha256Hex` helper, `padMetaResponse` struct
+- `frontend/app/_lib/crypto.ts` — extended `KeyDeriver` interface with `deriveWriteToken`; added `writeTokenFromKeyMaterial` helper; updated `getPasswordDeriver` and refactored `SIWEKeyDeriver` with keyMaterial cache to avoid double wallet popup; updated registry sentinel
+- `frontend/app/_lib/pads.ts` — added `writeToken`/`newWriteToken` to `PadData`; added `getPadContent` (authenticated GET with `X-Write-Token` header); updated `setPad` to send token fields and handle 403
+- `frontend/app/[slug]/PadEditor.tsx` — added `writeTokenRef`; updated unlock handlers to derive token and call `getPadContent`; updated auto-save to include write token; updated encrypt/re-encrypt handlers to send old and new tokens on key change
+- `docs/api-spec.md` — documented two-phase GET responses, new body fields, and 403 responses for both endpoints
+- `docs/architecture.md` — updated Key Derivation section and Encryption Data Flow (write + read paths)
+- `docs/features.md` — added Write-Token Authentication section; clarified verify_blob role
+
+**What changed:**
+- `GET /pads/{slug}` on an encrypted pad without `X-Write-Token` now returns only `{ slug, encrypted, deriver_id }` — no ciphertext or verify_blob
+- `GET /pads/{slug}` with a valid `X-Write-Token` header returns the full response; wrong token returns 403
+- `PUT /pads/{slug}` on an existing encrypted pad requires `write_token` in the body; wrong or missing token returns 403
+- Key changes send both `write_token` (old) and `new_write_token` (new); server validates old and replaces stored hash with SHA-256 of new
+- Server stores `sha256(write_token)` — never the token itself; the AES-GCM key never leaves the browser
+- Unencrypted pads and legacy encrypted pads (no stored token) are unaffected
+
+**Why:** Encrypted pads were fully writable and readable by anyone who knew the slug. Write tokens derived from the same key material as the AES-GCM encryption key now gate both reads and writes on encrypted pads.
+
+---
+
 ## 2026-05-22 — Horizontal scaling with multiple backend containers and Caddy load balancing
 
 **Agent:** claude-sonnet-4-6

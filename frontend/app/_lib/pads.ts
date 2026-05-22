@@ -6,12 +6,34 @@ export type PadData = {
   encrypted: boolean;
   verifyBlob: string;
   deriverId: DeriverId | "";
+  writeToken?: string;
+  newWriteToken?: string;
 };
 
 export async function getPad(slug: string): Promise<PadData | null> {
   const res = await apiFetch(`/pads/${slug}`);
   if (res.status === 404) return null;
   if (!res.ok) throw new Error("failed to get pad");
+  const body = (await res.json()) as {
+    content?: string;
+    encrypted: boolean;
+    verify_blob?: string;
+    deriver_id: string;
+  };
+  return {
+    content: body.content ?? "",
+    encrypted: body.encrypted,
+    verifyBlob: body.verify_blob ?? "",
+    deriverId: (body.deriver_id ?? "") as DeriverId | "",
+  };
+}
+
+export async function getPadContent(slug: string, writeToken: string): Promise<PadData> {
+  const res = await apiFetch(`/pads/${slug}`, {
+    headers: { "X-Write-Token": writeToken },
+  });
+  if (res.status === 403) throw new Error("write token invalid");
+  if (!res.ok) throw new Error("failed to get pad content");
   const body = (await res.json()) as {
     content: string;
     encrypted: boolean;
@@ -35,8 +57,11 @@ export async function setPad(slug: string, data: PadData): Promise<void> {
       encrypted: data.encrypted,
       verify_blob: data.verifyBlob,
       deriver_id: data.deriverId,
+      write_token: data.writeToken ?? "",
+      new_write_token: data.newWriteToken ?? "",
     }),
   });
   if (res.status === 429) throw new Error("rate limit exceeded");
+  if (res.status === 403) throw new Error("write token invalid");
   if (!res.ok) throw new Error("failed to save pad");
 }

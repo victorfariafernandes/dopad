@@ -69,6 +69,11 @@ export async function decryptText(
   return new TextDecoder().decode(pt);
 }
 
+async function writeTokenFromKeyMaterial(keyBytes: Uint8Array): Promise<string> {
+  const hash = await crypto.subtle.digest("SHA-256", keyBytes.buffer as ArrayBuffer);
+  return bytesToHex(new Uint8Array(hash));
+}
+
 function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, "0"))
@@ -116,6 +121,7 @@ export interface KeyDeriver {
   readonly id: string;
   readonly label: string;
   deriveKey(ctx: { slug: string }): Promise<CryptoKey>;
+  deriveWriteToken(ctx: { slug: string }): Promise<string>;
 }
 
 // Returns a KeyDeriver bound to a specific password. The registry sentinel for
@@ -125,6 +131,10 @@ export function getPasswordDeriver(password: string): KeyDeriver {
     id: DERIVER_PASSWORD,
     label: "Password",
     deriveKey: async (_ctx: { slug: string }) => deriveKey(password),
+    deriveWriteToken: async (_ctx: { slug: string }) => {
+      const keyBytes = sha3_256(new TextEncoder().encode(password));
+      return writeTokenFromKeyMaterial(keyBytes);
+    },
   };
 }
 
@@ -134,7 +144,19 @@ class SIWEKeyDeriver implements KeyDeriver {
   readonly id = DERIVER_SIWE;
   readonly label = "Wallet (SIWE)";
 
-  async deriveKey(ctx: { slug: string }): Promise<CryptoKey> {
+  // Cache keyed by slug so the wallet popup fires at most once per slug.
+  private readonly _cache = new Map<string, Promise<Uint8Array>>();
+
+  private _getKeyMaterial(ctx: { slug: string }): Promise<Uint8Array> {
+    const cached = this._cache.get(ctx.slug);
+    if (cached) return cached;
+    const p = this._deriveKeyMaterial(ctx);
+    this._cache.set(ctx.slug, p);
+    p.catch(() => this._cache.delete(ctx.slug));
+    return p;
+  }
+
+  private async _deriveKeyMaterial(ctx: { slug: string }): Promise<Uint8Array> {
     const { ethers } = await import("ethers");
     if (!window.ethereum) {
       throw new Error("No browser wallet found. Install MetaMask.");
@@ -146,14 +168,23 @@ class SIWEKeyDeriver implements KeyDeriver {
     const address = await signer.getAddress();
     const message = `zeropad encrypt: ${ctx.slug}\nWallet: ${address}`;
     const signature = await signer.signMessage(message);
-    const keyBytes = sha3_256(new TextEncoder().encode(signature));
+    return sha3_256(new TextEncoder().encode(signature));
+  }
+
+  async deriveKey(ctx: { slug: string }): Promise<CryptoKey> {
+    const keyBytes = await this._getKeyMaterial(ctx);
     return crypto.subtle.importKey(
       "raw",
-      keyBytes,
+      keyBytes.buffer as ArrayBuffer,
       { name: "AES-GCM" },
       false,
       ["encrypt", "decrypt"],
     );
+  }
+
+  async deriveWriteToken(ctx: { slug: string }): Promise<string> {
+    const keyBytes = await this._getKeyMaterial(ctx);
+    return writeTokenFromKeyMaterial(keyBytes);
   }
 }
 
@@ -164,6 +195,9 @@ export const keyDerivers: readonly KeyDeriver[] = [
     id: DERIVER_PASSWORD,
     label: "Password",
     deriveKey: async () => {
+      throw new Error("Use getPasswordDeriver(password) instead.");
+    },
+    deriveWriteToken: async () => {
       throw new Error("Use getPasswordDeriver(password) instead.");
     },
   },

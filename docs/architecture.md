@@ -79,44 +79,79 @@ Layer responsibilities:
 
 ## Key Derivation
 
-Pad encryption uses a `KeyDeriver` abstraction (`app/_lib/crypto.ts`). The derived `CryptoKey` is held in a React ref and used for all encrypt/decrypt operations — it never leaves the browser.
+Pad encryption uses a `KeyDeriver` abstraction (`app/_lib/crypto.ts`). Both the AES-GCM key and the write token (used for server-side authentication) are derived from the same raw key material bytes — before those bytes are passed to `importKey`. The `CryptoKey` is held in a React ref and never leaves the browser.
 
 ```typescript
 interface KeyDeriver {
   readonly id: string;
   readonly label: string;
   deriveKey(ctx: { slug: string }): Promise<CryptoKey>;
+  deriveWriteToken(ctx: { slug: string }): Promise<string>;
 }
 ```
 
-| Method | id | How the key is derived |
-|--------|----|------------------------|
-| Password | `"password"` | User-typed string → UTF-8 → SHA3-256 → AES-GCM key |
-| Wallet (SIWE) | `"siwe"` | `personal_sign` of `"dopad encrypt: {slug}\nWallet: {address}"` → UTF-8(signature) → SHA3-256 → AES-GCM key |
+| Method | id | Key material | AES-GCM key | Write token |
+|--------|----|-------------|------------|-------------|
+| Password | `"password"` | `sha3_256(password_bytes)` | `importKey(keyMaterial)` | `sha256hex(keyMaterial)` |
+| Wallet (SIWE) | `"siwe"` | `sha3_256(signature_bytes)` | `importKey(keyMaterial)` | `sha256hex(keyMaterial)` |
 
-The wallet-based method is deterministic per (slug, wallet address) pair: the same wallet always produces the same key for a given pad, with no backend involvement or nonce exchange.
+The wallet-based method is deterministic per (slug, wallet address) pair. The `SIWEKeyDeriver` caches the raw key material promise per slug so that `deriveKey` and `deriveWriteToken` share a single `personal_sign` call — one wallet popup per unlock or encrypt operation.
 
-Adding a new method (e.g. Google Auth) requires implementing `KeyDeriver` and appending it to the `keyDerivers` registry in `crypto.ts`.
+Adding a new method (e.g. Google Auth) requires implementing `KeyDeriver` (both methods) and appending it to the `keyDerivers` registry in `crypto.ts`.
 
 ---
 
 ## Encryption Data Flow
 
+### Write (encrypt / save)
+
 ```
 User provides key input (password or wallet signature)
         │
         ▼
-KeyDeriver.deriveKey({ slug }) → CryptoKey (AES-GCM-256, in-memory only)
+keyMaterial = sha3_256(input_bytes)   ← raw 32 bytes, computed once
+        │
+        ├─► importKey(keyMaterial) → CryptoKey (AES-GCM-256, extractable:false, in-memory only)
+        │
+        └─► sha256hex(keyMaterial) → writeToken (sent to server; AES key never leaves browser)
         │
         ▼
 encryptText(key, plaintext) → base64(iv[12] || ciphertext)
-makeVerifyBlob(key)         → base64(salt[16] || iv[12] || ciphertext)
+makeVerifyBlob(key)         → base64(salt[16] || iv[12] || ciphertext)   ← client-side check only
         │
         ▼
-PUT /pads/{slug}  { content: ciphertext, encrypted: true, verify_blob: blob }
+PUT /pads/{slug}  { content: ciphertext, encrypted: true, verify_blob: blob,
+                    write_token: writeToken [, new_write_token: newToken] }
         │
         ▼
-Backend stores opaque bytes — never decrypts
+Backend validates sha256(write_token) == stored HashedWriteToken
+        │
+        ▼
+Backend stores opaque ciphertext + sha256(write_token) — never decrypts
+```
+
+### Read (unlock)
+
+```
+User provides key input (password or wallet signature)
+        │
+        ▼
+keyMaterial = sha3_256(input_bytes)
+        │
+        ├─► CryptoKey  (for decryption)
+        └─► writeToken (sha256hex(keyMaterial))
+        │
+        ▼
+GET /pads/{slug}  X-Write-Token: writeToken
+        │         (unauthenticated GET returns only slug/encrypted/deriver_id)
+        ▼
+Backend validates sha256(writeToken) == HashedWriteToken → returns ciphertext + verify_blob
+        │
+        ▼
+checkVerifyBlob(key, verify_blob)  ← client-side key confirmation
+        │
+        ▼
+decryptText(key, ciphertext) → plaintext  (never sent to server)
 ```
 
 ---
