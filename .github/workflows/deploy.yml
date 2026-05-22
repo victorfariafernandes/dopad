@@ -142,6 +142,7 @@ jobs:
           OCI_NAMESPACE: ${{ secrets.OCI_NAMESPACE }}
         run: |
           ansible-playbook playbook.yml \
-            -i inventory.prod.ini \
+            -i "${{ vars.VM_IP }}," \
+            -e "ansible_user=opc ansible_ssh_private_key_file=~/.ssh/zeropad_deploy_rsa" \
             --tags backend,frontend \
             --extra-vars "release_tag=${{ needs.tag.outputs.new_tag }}"
