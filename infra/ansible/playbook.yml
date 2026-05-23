@@ -1,6 +1,6 @@
 ---
 - name: Configure zeropad VM
-  hosts: zeropad
+  hosts: all
   become: true
   vars:
     domain: "zeropad.dev"
