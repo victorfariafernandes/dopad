@@ -16,6 +16,13 @@ import {
 import type { DeriverId } from "@/app/_lib/crypto";
 import { getPad, getPadContent, setPad } from "@/app/_lib/pads";
 import { DeriverSelect } from "./DeriverSelect";
+import { ContentTypeSelect } from "./ContentTypeSelect";
+import { LanguageSelect } from "./LanguageSelect";
+import { RichTextEditor } from "./RichTextEditor";
+import { LatexEditor } from "./LatexEditor";
+import { CodeEditor } from "./CodeEditor";
+import { parseContent, serializeContent } from "./contentTypes";
+import type { ContentType, Language } from "./contentTypes";
 
 type SaveState = "idle" | "saving" | "saved" | "rate-limited";
 type PadState = "loading" | "locked" | "unlocked";
@@ -31,6 +38,10 @@ export function PadEditor({ slug }: { slug: string }) {
   const writeTokenRef = useRef<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  const [contentType, setContentType] = useState<ContentType>("text");
+  const [language, setLanguage] = useState<Language>("javascript");
+  const [body, setBody] = useState("");
+
   // Locked state
   const [unlockPassword, setUnlockPassword] = useState("");
   const [unlockError, setUnlockError] = useState("");
@@ -44,6 +55,17 @@ export function PadEditor({ slug }: { slug: string }) {
   const [formConfirm, setFormConfirm] = useState("");
   const [formError, setFormError] = useState("");
   const [formSaving, setFormSaving] = useState(false);
+
+  function applyParsedContent(raw: string) {
+    try {
+      const envelope = parseContent(raw);
+      setContentType(envelope.type);
+      setLanguage(envelope.lang ?? "javascript");
+      setBody(envelope.body);
+    } catch {
+      setBody(raw);
+    }
+  }
 
   useEffect(() => {
     getPad(slug).then((pad) => {
@@ -62,6 +84,7 @@ export function PadEditor({ slug }: { slug: string }) {
         setPadState("locked");
       } else {
         setContent(pad.content);
+        applyParsedContent(pad.content);
         setPadState("unlocked");
       }
     });
@@ -88,6 +111,7 @@ export function PadEditor({ slug }: { slug: string }) {
       writeTokenRef.current = token;
       setVerifyBlob(fullPad.verifyBlob);
       setContent(plaintext);
+      applyParsedContent(plaintext);
       setPadState("unlocked");
       setUnlockPassword("");
     } catch (err) {
@@ -120,6 +144,7 @@ export function PadEditor({ slug }: { slug: string }) {
       writeTokenRef.current = token;
       setVerifyBlob(fullPad.verifyBlob);
       setContent(plaintext);
+      applyParsedContent(plaintext);
       setPadState("unlocked");
     } catch (err) {
       if (err instanceof Error && err.message === "write token invalid") {
@@ -157,6 +182,12 @@ export function PadEditor({ slug }: { slug: string }) {
         }
       }
     }, 800);
+  }
+
+  function handleBodyChange(value: string) {
+    setBody(value);
+    const serialized = serializeContent({ type: contentType, lang: language, body: value });
+    handleChange(serialized);
   }
 
   async function handlePasswordFormSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
@@ -418,12 +449,29 @@ export function PadEditor({ slug }: { slug: string }) {
           )}
         </div>
       </header>
-      <textarea
-        value={content}
-        onChange={(e) => handleChange(e.target.value)}
-        placeholder="Start writing…"
-        className="flex-1 w-full p-4 resize-none bg-white dark:bg-black text-sm font-mono outline-none"
-      />
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-black/10 dark:border-white/10">
+        <ContentTypeSelect value={contentType} onChange={setContentType} />
+        {contentType === "code" && (
+          <LanguageSelect value={language} onChange={setLanguage} />
+        )}
+      </div>
+      {contentType === "text" && (
+        <textarea
+          value={body}
+          onChange={(e) => handleBodyChange(e.target.value)}
+          placeholder="Start writing…"
+          className="flex-1 w-full p-4 resize-none bg-white dark:bg-black text-sm font-mono outline-none"
+        />
+      )}
+      {contentType === "rich-text" && (
+        <RichTextEditor body={body} onChange={handleBodyChange} />
+      )}
+      {contentType === "latex" && (
+        <LatexEditor body={body} onChange={handleBodyChange} />
+      )}
+      {contentType === "code" && (
+        <CodeEditor body={body} language={language} onChange={handleBodyChange} />
+      )}
     </div>
   );
 }

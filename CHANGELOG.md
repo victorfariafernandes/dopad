@@ -18,6 +18,29 @@ This file is maintained by AI agents. Every time an agent makes any change to th
 
 ---
 
+## 2026-05-22 — Content type selector (Text, Rich Text, LaTeX, Code)
+
+**Agent:** claude-sonnet-4-6
+**Files changed:**
+- `frontend/app/[slug]/contentTypes.ts` — added `ContentType`, `Language` types, `CONTENT_TYPES`/`LANGUAGES` registries, `PadContentEnvelope`, `parseContent`, `serializeContent`
+- `frontend/app/[slug]/ContentTypeSelect.tsx` — pill-button segmented control for choosing content type
+- `frontend/app/[slug]/LanguageSelect.tsx` — pill-button segmented control for choosing language (shown when type is "code")
+- `frontend/app/[slug]/RichTextEditor.tsx` — TipTap-based rich text editor
+- `frontend/app/[slug]/LatexEditor.tsx` — split-pane LaTeX editor (raw textarea left, KaTeX-rendered preview right)
+- `frontend/app/[slug]/CodeEditor.tsx` — CodeMirror 6 editor with JavaScript, C (via lang-cpp), and Python support; dark/light theme aware
+- `frontend/app/[slug]/PadEditor.tsx` — added `contentType`, `language`, `body` state; toolbar row below header with `ContentTypeSelect` + conditional `LanguageSelect`; conditional editor rendering; `handleBodyChange` serializes envelope before auto-save; unlock handlers parse content after decryption
+- `frontend/package.json` — added `@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`, `katex`, `@uiw/react-codemirror`, `@codemirror/lang-javascript`, `@codemirror/lang-cpp`, `@codemirror/lang-python`, `@codemirror/theme-one-dark`; added `@types/katex` dev dep
+
+**What changed:**
+- Pad content is now stored as a JSON envelope `{ type, lang?, body }` — no backward compat with old plain-text pads (data was wiped)
+- A toolbar appears between the header and the editor area with four pill buttons: Text / Rich Text / LaTeX / Code
+- Selecting Code reveals a second pill group: JavaScript / C / Python
+- Each type renders a different editor component; all editors feed into the same debounced auto-save and encryption flow
+
+**Why:** Users needed to choose a content mode (plain text, rich text, LaTeX, or code with syntax highlighting) when creating or editing a pad.
+
+---
+
 ## 2026-05-22 — Write-token authentication for encrypted pads
 
 **Agent:** claude-sonnet-4-6
